@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata" xmlns:json="http://www.mulesoft.org/schema/mule/json" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd">
+    <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="8081" doc:name="HTTP Listener Configuration"/>
+    <flow name="dataweavesampleFlow" initialState="stopped">
+        <file:inbound-endpoint path="F:\muleTestFile\input" moveToDirectory="F:\muleTestFile\ouput" responseTimeout="10000" doc:name="File">
+            <file:filename-regex-filter pattern="dataweave_xml_sample.xml" caseSensitive="false"/>
+        </file:inbound-endpoint>
+        <dw:transform-message doc:name="Transform Message">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+{
+        address1: payload.order.buyer.address,
+        city: payload.order.buyer.city,
+        country: payload.order.buyer.nationality,
+        email: payload.order.buyer.email,
+        name: payload.order.buyer.name,
+        postalCode: payload.order.buyer.postCode,
+        stateOrProvince: payload.order.buyer.state,
+        model: payload.order.product.model
+}]]></dw:set-payload>
+        </dw:transform-message>
+        <logger message="&gt;&gt;&gt;&gt;&gt;&gt;MSG XML &gt;&gt;&gt;&gt;&gt;#[payload]" level="INFO" doc:name="Logger"/>
+        <dw:transform-message doc:name="Transform Message">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+{
+	city: payload.city,
+	country: payload.country
+	
+}]]></dw:set-payload>
+        </dw:transform-message>
+        <logger message="&gt;&gt;&gt; Java &gt;&gt;&gt;&gt;#[message]" level="INFO" doc:name="Logger"/>
+    </flow>
+    <flow name="dataweavesampleFlow1">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/dataweave" allowedMethods="get" doc:name="HTTP"/>
+        <component class="dataweavesample.com.upesh.DataWeaveTest" doc:name="Java"/>
+        <dw:transform-message doc:name="Transform Message" metadata:id="3e8f7a7a-d62e-4f20-97de-db09bb1e78a9">
+            <dw:input-payload doc:sample="sample_data\string.dwl" mimeType="application/java"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+{
+	age: payload.age ,
+	name: payload.name
+} as :object {
+	class : "dataweavesample.com.upesh.Employee"
+}]]></dw:set-payload>
+        </dw:transform-message>
+        <json:object-to-json-transformer doc:name="Object to JSON"/>
+        <logger message="&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;PayLoad &gt;&gt;&gt;&gt;#[payload]" level="INFO" doc:name="Logger"/>
+    </flow>
+    <flow name="dataweavesampleFlow2">
+        <file:inbound-endpoint path="F:\muleTestFile\input" moveToDirectory="F:\muleTestFile\ouput" responseTimeout="10000" doc:name="File">
+            <file:filename-regex-filter pattern="books.json" caseSensitive="true"/>
+        </file:inbound-endpoint>
+        <dw:transform-message doc:name="Transform Message">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+{
+	items: payload.books map ((item , index)->{
+		category: "book",
+		price: item.price as :number ,
+		id : index
+	}
+	)	
+	
+}]]></dw:set-payload>
+        </dw:transform-message>
+        <logger message="JSON _TFM &gt;&gt;&gt;&gt;&gt;&gt;&gt;#[payload]" level="INFO" doc:name="Logger"/>
+    </flow>
+</mule>
